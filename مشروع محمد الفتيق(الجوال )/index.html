@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Air Battle Evolution - تسجيل الدخول</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="layout" id="auth-layout">
+      <section class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-copy">
+          <h1>Air Battle Evolution</h1>
+          <p>
+            ابدأ رحلتك في ساحة المعركة الجوية بعد تسجيل الدخول وحفظ بياناتك في
+            قاعدة Firebase Realtime Database.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-tabs">
+          <button class="tab-button active" data-target="login-form">
+            تسجيل الدخول
+          </button>
+          <button class="tab-button" data-target="signup-form">
+            إنشاء حساب جديد
+          </button>
+        </div>
+
+        <form id="login-form" class="form active">
+          <label>
+            اسم اللاعب
+            <input
+              type="text"
+              name="username"
+              placeholder="اسمك في اللعبة"
+              required
+            />
+          </label>
+
+          <label>
+            كلمة المرور
+            <input
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              required
+            />
+          </label>
+
+          <div class="form-row">
+            <label class="checkbox">
+              <input type="checkbox" name="remember" />
+              تذكّرني تلقائياً
+            </label>
+            <button type="button" class="link" id="hint-btn">
+              عرض التلميح
+            </button>
+          </div>
+
+          <button type="submit" class="primary">دخول</button>
+          <div class="feedback" id="login-feedback"></div>
+        </form>
+
+        <form id="signup-form" class="form">
+          <label>
+            اسم اللاعب
+            <input
+              type="text"
+              name="username"
+              placeholder="اختر معرفاً فريداً"
+              required
+            />
+          </label>
+
+          <label>
+            كلمة المرور
+            <input
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              minlength="6"
+              required
+            />
+          </label>
+
+          <label>
+            التلميح السري
+            <input
+              type="text"
+              name="hint"
+              placeholder="مثال: اسم قطتي"
+              required
+            />
+          </label>
+
+          <label>
+            صورة الحساب
+            <input type="file" name="avatar" accept="image/*" />
+          </label>
+
+          <button type="submit" class="primary">حفظ الحساب</button>
+          <div class="feedback" id="signup-feedback"></div>
+        </form>
+
+        <div class="profile-preview" id="profile-preview" hidden>
+          <img id="profile-avatar" alt="صورة الحساب" />
+          <div>
+            <p id="profile-name"></p>
+            <small id="profile-hint"></small>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="dashboard" id="dashboard" hidden>
+      <header class="dashboard-header">
+        <div>
+          <p class="tag">جاهز للانطلاق</p>
+          <h2>مركز قيادة الطيار</h2>
+          <p>
+            تابع ترتيبك العالمي وشاهد أفضل 10 طيارين قبل أن تبدأ جولتك
+            التالية في Air Battle Evolution.
+          </p>
+        </div>
+        <button class="primary large" id="start-game">ادخل المعركة</button>
+      </header>
+
+      <div class="dashboard-grid">
+        <article class="status-card">
+          <h3>ترتيبك العالمي</h3>
+          <p id="global-rank">-</p>
+          <small id="global-score">لم تُسجل نقاط بعد</small>
+        </article>
+        <article class="status-card">
+          <h3>أفضل نتيجة</h3>
+          <p id="latest-score">0</p>
+          <small>أعلى نقاط حققتها في التاريخ</small>
+        </article>
+        <article class="status-card highlight">
+          <h3>مستواك الحالي</h3>
+          <p id="level-value">0</p>
+          <small id="upgrade-label">لا ترقيات بعد</small>
+        </article>
+      </div>
+
+      <div class="dashboard-grid">
+        <article class="status-card">
+          <h3>عدد اللاعبين</h3>
+          <p id="total-players">0</p>
+          <small>إجمالي اللاعبين المسجلين</small>
+        </article>
+        <article class="status-card">
+          <h3>مركزك</h3>
+          <p id="player-rank">-</p>
+          <small id="player-rank-detail">من إجمالي اللاعبين</small>
+        </article>
+      </div>
+
+      <section class="leaderboard">
+        <header>
+          <h3>أفضل 10 طيارين</h3>
+          <p>التصنيف يُحدث مباشرة من Firebase.</p>
+        </header>
+        <ol id="leaderboard-list" class="leaderboard-list">
+          <li class="placeholder">لا توجد بيانات متاحة بعد.</li>
+        </ol>
+      </section>
+
+      <div class="feedback dashboard-feedback" id="dashboard-feedback"></div>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <button class="ghost" id="back-to-auth">العودة لشاشة التسجيل</button>
+        <button class="primary" id="open-settings">الإعدادات</button>
+      </div>
+    </section>
+
+    <!-- صفحة الإعدادات -->
+    <section class="settings-page" id="settings-page" hidden>
+      <header class="settings-header">
+        <h2>الإعدادات</h2>
+        <button class="ghost" id="close-settings">إغلاق</button>
+      </header>
+
+      <div class="settings-content">
+        <div class="settings-section">
+          <h3>تعديل كلمة المرور</h3>
+          <form id="change-password-form">
+            <label>
+              كلمة المرور الحالية
+              <input type="password" name="current-password" placeholder="••••••••" required />
+            </label>
+            <label>
+              كلمة المرور الجديدة
+              <input type="password" name="new-password" placeholder="••••••••" minlength="6" required />
+            </label>
+            <button type="submit" class="primary">تحديث كلمة المرور</button>
+            <div class="feedback" id="password-feedback"></div>
+          </form>
+        </div>
+
+        <div class="settings-section">
+          <h3>تعديل صورة الحساب</h3>
+          <div class="avatar-preview-section">
+            <img id="settings-avatar-preview" src="" alt="صورة الحساب" />
+            <form id="change-avatar-form">
+              <label>
+                اختر صورة جديدة
+                <input type="file" name="new-avatar" accept="image/*" />
+              </label>
+              <button type="submit" class="primary">تحديث الصورة</button>
+              <div class="feedback" id="avatar-feedback"></div>
+            </form>
+          </div>
+        </div>
+
+        <div class="settings-section danger-zone">
+          <h3>منطقة الخطر</h3>
+          <p>حذف الحساب نهائياً - لا يمكن التراجع عن هذا الإجراء</p>
+          <form id="delete-account-form">
+            <label>
+              أكد حذف الحساب بكتابة كلمة المرور
+              <input type="password" name="confirm-password" placeholder="••••••••" required />
+            </label>
+            <button type="submit" class="danger">حذف الحساب نهائياً</button>
+            <div class="feedback" id="delete-feedback"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="game-stage" id="game-stage" hidden>
+      <div class="game-hud">
+        <div>
+          <p>النتيجة</p>
+          <strong id="game-score">0</strong>
+        </div>
+        <div>
+          <p>المستوى</p>
+          <strong id="hud-level">0</strong>
+        </div>
+        <div>
+          <p>الترقية</p>
+          <strong id="hud-upgrade">أساسي</strong>
+        </div>
+        <div>
+          <p>الوقت</p>
+          <strong id="game-timer">00:00</strong>
+        </div>
+        <div>
+          <p>الحياة</p>
+          <strong id="game-health">100</strong>
+        </div>
+        <button class="ghost" id="exit-game">إنهاء الجولة</button>
+      </div>
+      <div class="ability-indicators">
+        <span class="ability-chip" id="shield-indicator">الدرع: غير متاح</span>
+        <span class="ability-chip" id="laser-indicator">الليزر: غير متاح</span>
+        <span class="ability-chip" id="health-pack-indicator">حزمة الحياة: متاحة</span>
+      </div>
+      <div class="boss-banner" id="boss-banner" hidden></div>
+      <canvas id="game-canvas" width="900" height="600">
+        متصفحك لا يدعم عنصر canvas.
+      </canvas>
+      
+      <p class="game-tip">
+        اسحب بإصبعك لتحريك الطائرة. الإطلاق تلقائي مستمر.
+      </p>
+    </section>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
+
