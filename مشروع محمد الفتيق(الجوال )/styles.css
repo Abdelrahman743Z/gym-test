@@ -395,15 +395,20 @@ input:focus {
 
 .leaderboard-list li {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.9rem 1rem;
+  gap: 1rem;
+  padding: 1rem;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   font-weight: 600;
+  transition: background 0.2s ease;
 }
 
-.leaderboard-list li span {
+.leaderboard-list li:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.leaderboard-list li .rank-number {
   display: inline-flex;
   width: 40px;
   height: 40px;
@@ -411,11 +416,96 @@ input:focus {
   background: rgba(255, 255, 255, 0.08);
   align-items: center;
   justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.leaderboard-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.leaderboard-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.leaderboard-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.leaderboard-name strong {
+  font-size: 1rem;
+}
+
+.verified-badge {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4de1c1, #684fff);
+  color: white;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.leaderboard-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.leaderboard-details small {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .leaderboard-list li.me {
   border: 1px solid var(--mint);
   background: rgba(77, 225, 193, 0.08);
+}
+
+@media (max-width: 600px) {
+  .leaderboard-list li {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .leaderboard-avatar {
+    width: 45px;
+    height: 45px;
+  }
+
+  .leaderboard-list li .rank-number {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+
+  .leaderboard-name strong {
+    font-size: 0.9rem;
+  }
+
+  .leaderboard-details {
+    gap: 0.3rem;
+  }
+
+  .leaderboard-details small {
+    font-size: 0.75rem;
+  }
 }
 
 .dashboard-feedback {

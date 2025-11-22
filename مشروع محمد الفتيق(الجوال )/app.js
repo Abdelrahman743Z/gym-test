@@ -276,7 +276,39 @@
       }
       return (b.score || 0) - (a.score || 0);
     });
-    return entries;
+
+    // جلب بيانات المستخدمين (الصورة والدولة)
+    const enrichedEntries = await Promise.all(
+      entries.map(async (entry) => {
+        try {
+          const userSnapshot = await db.ref(`users/${entry.username}`).get();
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            return {
+              ...entry,
+              avatar: userData.avatar || DEFAULT_AVATAR,
+              country: userData.country || "غير محدد",
+              verified: userData.verified || false,
+            };
+          }
+          return {
+            ...entry,
+            avatar: DEFAULT_AVATAR,
+            country: "غير محدد",
+            verified: false,
+          };
+        } catch (error) {
+          return {
+            ...entry,
+            avatar: DEFAULT_AVATAR,
+            country: "غير محدد",
+            verified: false,
+          };
+        }
+      })
+    );
+
+    return enrichedEntries;
   }
 
   async function refreshLeaderboard(message) {
@@ -334,11 +366,25 @@
         entry.username === currentUser?.username ? "me" : undefined;
       const level = entry.level || 0;
       const score = entry.score || 0;
+      const avatar = entry.avatar || DEFAULT_AVATAR;
+      const country = entry.country || "غير محدد";
+      const verifiedBadge = entry.verified ? '<span class="verified-badge">✓</span>' : '';
+
       item.innerHTML = `
-        <span>${index + 1}</span>
-        <div>
+        <span class="rank-number">${index + 1}</span>
+        <img src="${avatar}" alt="${entry.username}" class="leaderboard-avatar" />
+        <div class="leaderboard-info">
+          <div class="leaderboard-name">
           <strong>${entry.username}</strong>
-          <small>Level ${level} • ${score} نقطة</small>
+            ${verifiedBadge}
+          </div>
+          <div class="leaderboard-details">
+            <small>المستوى: ${level}</small>
+            <small>•</small>
+            <small>${score} نقطة</small>
+            <small>•</small>
+            <small>${country}</small>
+          </div>
         </div>
       `;
       leaderboardList.appendChild(item);
@@ -837,16 +883,21 @@
       level === 100 ? "Final Boss" : `Boss ${Math.floor(level / 10)}`;
     setBossBanner(`⚠️ ${bossName} ظهر الآن!`);
     enemies.length = 0;
+    // تقوية Boss بناءً على المستوى
+    const bossHealth = level * 2; // صحة مضاعفة
+    const bossSize = 140 + (level * 0.5); // حجم أكبر
+    const bossSpeed = 0.6 + (level * 0.05); // سرعة أعلى
+    const bossDamage = 5 + (level * 0.5); // ضرر أعلى
     enemies.push({
       type: "boss",
       x: canvas.width / 2,
       y: -150,
-      size: 140,
-      speed: 0.6 + level * 0.02,
+      size: Math.min(bossSize, 200), // حد أقصى للحجم
+      speed: Math.min(bossSpeed, 3), // حد أقصى للسرعة
       pulse: 0,
-      health: level,
-      maxHealth: level,
-      damage: 5 + level * 0.3,
+      health: bossHealth,
+      maxHealth: bossHealth,
+      damage: bossDamage,
       label: bossName,
     });
   }
@@ -1028,6 +1079,10 @@
       defeatedBossLevels.add(enemy.maxHealth || bossActiveLevel || 0);
       bossActiveLevel = null;
       setBossBanner("تم إسقاط الزعيم!");
+      // إخفاء الرسالة بعد ثانية واحدة
+      setTimeout(() => {
+        setBossBanner("");
+      }, 1000);
       addScore(enemy.maxHealth * BOSS_SCORE_MULTIPLIER);
     } else {
       addScore(NORMAL_ENEMY_SCORE);
@@ -1243,6 +1298,78 @@
   document.addEventListener("keyup", handleKeyUp);
   window.addEventListener("blur", () => keys.clear());
 
-  loadRememberedUser();
+  // إنشاء الحسابين الموثقين
+  async function initializeVerifiedAccounts() {
+    const accounts = [
+      {
+        username: "Mohamed Adballa",
+        password: "Admin 1234",
+        country: "مصر",
+        verified: true,
+        avatar: DEFAULT_AVATAR,
+      },
+      {
+        username: "Abdelrahman solah",
+        password: "Admin 1234",
+        country: "مصر",
+        verified: true,
+        avatar: DEFAULT_AVATAR,
+      },
+    ];
+
+    for (const account of accounts) {
+      try {
+        const userSnapshot = await db.ref(`users/${account.username}`).get();
+        if (!userSnapshot.exists()) {
+          // إنشاء الحساب
+          await db.ref(`users/${account.username}`).set({
+            ...account,
+            createdAt: Date.now(),
+          });
+          // إنشاء سجل النقاط
+          await db.ref(`scores/${account.username}`).set({
+            username: account.username,
+            score: 0,
+            level: 0,
+            updatedAt: Date.now(),
+          });
+        } else {
+          // تحديث الحساب الموجود ليكون موثقاً
+          await db.ref(`users/${account.username}/verified`).set(true);
+        }
+      } catch (error) {
+        console.error(`Error initializing account ${account.username}:`, error);
+      }
+    }
+  }
+
+  // حذف جميع الحسابات الموجودة (عدا الحسابين الموثقين)
+  async function clearAllAccounts() {
+    try {
+      const usersSnapshot = await db.ref("users").get();
+      if (usersSnapshot.exists()) {
+        const users = usersSnapshot.val();
+        const verifiedUsernames = ["Mohamed Adballa", "Abdelrahman solah"];
+
+        for (const username in users) {
+          if (!verifiedUsernames.includes(username)) {
+            await db.ref(`users/${username}`).remove();
+            await db.ref(`scores/${username}`).remove();
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error clearing accounts:", error);
+    }
+  }
+
+  // تهيئة الحسابات عند تحميل الصفحة
+  async function initializeApp() {
+    await clearAllAccounts();
+    await initializeVerifiedAccounts();
+    loadRememberedUser();
+  }
+
+  initializeApp();
 })();
 
