@@ -26,15 +26,13 @@
   const profilePreview = document.getElementById("profile-preview");
   const profileAvatar = document.getElementById("profile-avatar");
   const profileName = document.getElementById("profile-name");
-  const profileHint = document.getElementById("profile-hint");
-  const hintBtn = document.getElementById("hint-btn");
+  const profileCountry = document.getElementById("profile-country");
 
   // Dashboard + game DOM
   const authLayout = document.getElementById("auth-layout");
   const dashboard = document.getElementById("dashboard");
   const dashboardFeedback = document.getElementById("dashboard-feedback");
   const levelValueEl = document.getElementById("level-value");
-  const upgradeLabelEl = document.getElementById("upgrade-label");
   const backToAuthBtn = document.getElementById("back-to-auth");
   const startGameBtn = document.getElementById("start-game");
   const exitGameBtn = document.getElementById("exit-game");
@@ -58,12 +56,8 @@
   const gameStage = document.getElementById("game-stage");
   const gameScoreEl = document.getElementById("game-score");
   const hudLevelEl = document.getElementById("hud-level");
-  const hudUpgradeEl = document.getElementById("hud-upgrade");
   const gameTimerEl = document.getElementById("game-timer");
   const gameHealthEl = document.getElementById("game-health");
-  const shieldIndicator = document.getElementById("shield-indicator");
-  const laserIndicator = document.getElementById("laser-indicator");
-  const healthPackIndicator = document.getElementById("health-pack-indicator");
   const bossBanner = document.getElementById("boss-banner");
   const canvas = document.getElementById("game-canvas");
   const ctx = canvas.getContext("2d");
@@ -168,7 +162,6 @@
   const stars = [];
   const bullets = [];
   const enemies = [];
-  const healthPacks = [];
   const defeatedBossLevels = new Set();
   const clearedUpgradeLevels = new Set();
 
@@ -183,30 +176,7 @@
     glow: false,
   };
 
-  const abilities = {
-    shield: {
-      available: false,
-      active: false,
-      duration: 0,
-      interval: 0,
-      lastTrigger: 0,
-    },
-    laser: {
-      available: false,
-      active: false,
-      duration: 0,
-      interval: 0,
-      lastTrigger: 0,
-    },
-    explosion: false,
-    healthPack: {
-      available: false,
-      active: false,
-      duration: 0,
-      interval: 0,
-      lastTrigger: 0,
-    },
-  };
+  // تم إزالة القدرات (الدرع، الليزر، حزمة الحياة)
 
   // UI helpers
   tabs.forEach((tab) => {
@@ -247,7 +217,7 @@
     });
   }
 
-  async function saveUser({ username, password, hint, avatar }) {
+  async function saveUser({ username, password, country, avatar }) {
     const snapshot = await db.ref(`users/${username}`).get();
     if (snapshot.exists()) {
       throw new Error("اسم اللاعب مستخدم بالفعل، جرّب اسماً آخر.");
@@ -256,7 +226,7 @@
     const payload = {
       username,
       password,
-      hint,
+      country,
       avatar,
       createdAt: Date.now(),
     };
@@ -325,7 +295,7 @@
         myIndex === -1 ? "خارج الترتيب" : `#${myIndex + 1}`;
       globalScoreEl.textContent = `Level ${bestLevel} • ${bestScore} نقطة`;
       latestScoreEl.textContent = `${bestScore}`;
-      
+
       // تحديث إحصائيات اللاعبين
       if (totalPlayersEl) {
         totalPlayersEl.textContent = totalPlayers;
@@ -334,11 +304,11 @@
         playerRankEl.textContent = myIndex === -1 ? "-" : `#${myIndex + 1}`;
       }
       if (playerRankDetailEl) {
-        playerRankDetailEl.textContent = myIndex === -1 
-          ? "غير مصنف" 
+        playerRankDetailEl.textContent = myIndex === -1
+          ? "غير مصنف"
           : `من ${totalPlayers} لاعب`;
       }
-      
+
       if (message) {
         showFeedback(dashboardFeedback, message, "success");
       }
@@ -358,7 +328,7 @@
       return;
     }
 
-      entries.forEach((entry, index) => {
+    entries.forEach((entry, index) => {
       const item = document.createElement("li");
       item.className =
         entry.username === currentUser?.username ? "me" : undefined;
@@ -381,7 +351,7 @@
       JSON.stringify({
         username: user.username,
         avatar: user.avatar,
-        hint: user.hint,
+        country: user.country,
       })
     );
   }
@@ -401,7 +371,7 @@
   function renderProfile(user, message = "") {
     profileAvatar.src = user.avatar || DEFAULT_AVATAR;
     profileName.textContent = `الطيار: ${user.username}`;
-    profileHint.textContent = `تلميحك: ${user.hint}`;
+    profileCountry.textContent = `الدولة: ${user.country || 'غير محدد'}`;
     profilePreview.hidden = false;
 
     if (message) {
@@ -427,7 +397,7 @@
     const previous = snapshot.exists() ? snapshot.val().score || 0 : 0;
     const level = getLevel(score);
     const previousLevel = snapshot.exists() ? snapshot.val().level || 0 : 0;
-    
+
     // إذا وصلت 1000 نقطة أو أكثر، احفظ أعلى نتيجة
     if (score > previous || level > previousLevel) {
       await ref.set({
@@ -458,10 +428,10 @@
     const formData = new FormData(signupForm);
     const username = formData.get("username").trim();
     const password = formData.get("password").trim();
-    const hint = formData.get("hint").trim();
+    const country = formData.get("country").trim();
     const avatarFile = formData.get("avatar");
 
-    if (!username || !password || !hint) {
+    if (!username || !password || !country) {
       showFeedback(signupFeedback, "الرجاء تعبئة جميع الحقول.");
       return;
     }
@@ -471,7 +441,7 @@
       const avatar = await fileToBase64(
         avatarFile && avatarFile.size ? avatarFile : null
       );
-      const user = await saveUser({ username, password, hint, avatar });
+      const user = await saveUser({ username, password, country, avatar });
       signupForm.reset();
       showFeedback(signupFeedback, "تم إنشاء الحساب بنجاح!", "success");
       renderProfile(user, "يمكنك الآن الدخول إلى اللعبة.");
@@ -507,27 +477,6 @@
     }
   });
 
-  hintBtn.addEventListener("click", async () => {
-    const username = loginForm.elements.username.value.trim();
-    if (!username) {
-      showFeedback(loginFeedback, "اكتب اسم اللاعب أولاً للحصول على التلميح.");
-      return;
-    }
-
-    try {
-      const snapshot = await db.ref(`users/${username}/hint`).get();
-      if (!snapshot.exists()) {
-        throw new Error("لا يوجد حساب بهذا الاسم.");
-      }
-      showFeedback(
-        loginFeedback,
-        `تلميحك السري: ${snapshot.val()}`,
-        "success"
-      );
-    } catch (error) {
-      showFeedback(loginFeedback, error.message || "تعذر جلب التلميح.");
-    }
-  });
 
   backToAuthBtn.addEventListener("click", () => {
     switchView("auth");
@@ -602,7 +551,7 @@
       const avatar = await fileToBase64(avatarFile && avatarFile.size ? avatarFile : null);
       await db.ref(`users/${currentUser.username}/avatar`).set(avatar);
       currentUser.avatar = avatar;
-      
+
       if (settingsAvatarPreview) {
         settingsAvatarPreview.src = avatar;
       }
@@ -642,7 +591,7 @@
       // حذف الحساب والنتائج
       await db.ref(`users/${currentUser.username}`).remove();
       await db.ref(`scores/${currentUser.username}`).remove();
-      
+
       showFeedback(deleteFeedback, "تم حذف الحساب بنجاح.", "success");
       setTimeout(() => {
         currentUser = null;
@@ -666,7 +615,6 @@
       if (tierConfig) {
         currentTier = tierConfig.tier;
         applyTierEffects(tierConfig);
-        updateUpgradeUI(tierConfig.name);
       }
     } else {
       currentRunScore = 0;
@@ -678,12 +626,9 @@
     defeatedBossLevels.clear();
     clearedUpgradeLevels.clear();
     updateLevelUI();
-    updateUpgradeUI("النموذج الأساسي");
-    updateAbilityIndicators();
     initStars();
     bullets.length = 0;
     enemies.length = 0;
-    healthPacks.length = 0;
     lastCollisionTime = 0;
     Object.assign(plane, {
       x: canvas.width / 2,
@@ -695,28 +640,6 @@
       fin: "#684fff",
       glow: false,
     });
-    Object.assign(abilities.shield, {
-      available: false,
-      active: false,
-      duration: 0,
-      interval: 0,
-      lastTrigger: 0,
-    });
-    Object.assign(abilities.laser, {
-      available: false,
-      active: false,
-      duration: 0,
-      interval: 0,
-      lastTrigger: 0,
-    });
-    Object.assign(abilities.healthPack, {
-      available: true,
-      active: false,
-      duration: 0,
-      interval: 30000,
-      lastTrigger: 0,
-    });
-    abilities.explosion = false;
     spawnInterval = BASE_SPAWN_INTERVAL;
     difficultySpeed = 1;
     lastShotTime = 0;
@@ -728,15 +651,15 @@
     updateScoreDisplays();
     updateHealthDisplay();
     setBossBanner("");
-    
+
     // إعادة تعيين حالة اللمس
     isTouching = false;
     keys.clear();
-    
+
     // ضبط حجم canvas للموبايل
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-    
+
     animationId = requestAnimationFrame(gameLoop);
   }
 
@@ -763,12 +686,12 @@
     gameActive = false;
     cancelAnimationFrame(animationId);
     setBossBanner("");
-    
+
     // إعادة تعيين حالة اللمس
     isTouching = false;
     keys.clear();
     window.removeEventListener("resize", resizeCanvas);
-    
+
     submitScore(currentRunScore)
       .then(() => refreshLeaderboard(message || "انتهت الجولة!"))
       .finally(() => {
@@ -836,29 +759,6 @@
     shooting.pattern = pattern;
     shooting.cooldown = shotCooldown;
     shooting.damage = damage;
-    abilities.explosion = Boolean(tierConfig.explosion);
-
-    if (tierConfig.shield) {
-      abilities.shield.available = true;
-      abilities.shield.duration = tierConfig.shield.duration;
-      abilities.shield.interval = tierConfig.shield.interval;
-      abilities.shield.lastTrigger = performance.now();
-    } else {
-      abilities.shield.available = false;
-      abilities.shield.active = false;
-    }
-
-    if (tierConfig.laser) {
-      abilities.laser.available = true;
-      abilities.laser.duration = tierConfig.laser.duration;
-      abilities.laser.interval = tierConfig.laser.interval;
-      abilities.laser.lastTrigger = performance.now();
-    } else {
-      abilities.laser.available = false;
-      abilities.laser.active = false;
-    }
-
-    updateAbilityIndicators();
   }
 
   const shooting = {
@@ -868,7 +768,7 @@
   };
 
   function shoot() {
-    if (!gameActive || abilities.laser.active) return;
+    if (!gameActive) return;
     const now = performance.now();
     if (now - lastShotTime < shooting.cooldown) return;
     lastShotTime = now;
@@ -966,8 +866,6 @@
     const delta = timestamp - lastFrameTime;
     lastFrameTime = timestamp;
 
-    updateAbilities(timestamp);
-
     // إطلاق نار مستمر تلقائي (auto-shoot)
     shoot();
 
@@ -980,10 +878,7 @@
     updateStars(delta);
     updateBullets(delta);
     updateEnemies(delta);
-    updateHealthPacks(delta);
-    applyLaserDamage(delta);
     detectCollisions();
-    detectHealthPackCollisions();
     drawScene();
     updateGameHUDTime(timestamp);
 
@@ -997,7 +892,7 @@
       const dy = touchTargetY - plane.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       const moveSpeed = plane.speed * (delta / 16) * 2; // أسرع قليلاً للاستجابة
-      
+
       if (distance > 5) {
         const moveX = (dx / distance) * moveSpeed;
         const moveY = (dy / distance) * moveSpeed;
@@ -1084,59 +979,7 @@
     }
   }
 
-  function updateHealthPacks(delta) {
-    for (let i = healthPacks.length - 1; i >= 0; i -= 1) {
-      const pack = healthPacks[i];
-      pack.y += 2;
-      pack.rotation += 0.1;
-      if (pack.y > canvas.height + 30) {
-        healthPacks.splice(i, 1);
-      }
-    }
-  }
-
-  function spawnHealthPack() {
-    if (abilities.healthPack.available && !abilities.healthPack.active) {
-      healthPacks.push({
-        x: 50 + Math.random() * (canvas.width - 100),
-        y: -30,
-        size: 20,
-        rotation: 0,
-        value: 30,
-      });
-      abilities.healthPack.active = true;
-      abilities.healthPack.lastTrigger = performance.now();
-    }
-  }
-
-  function detectHealthPackCollisions() {
-    for (let i = healthPacks.length - 1; i >= 0; i -= 1) {
-      const pack = healthPacks[i];
-      const dx = Math.abs(pack.x - plane.x);
-      const dy = Math.abs(pack.y - plane.y);
-      if (dx < pack.size && dy < pack.size) {
-        currentHealth = Math.min(STARTING_HEALTH, currentHealth + pack.value);
-        updateHealthDisplay();
-        healthPacks.splice(i, 1);
-        abilities.healthPack.active = false;
-      }
-    }
-  }
-
-  function applyLaserDamage(delta) {
-    if (!abilities.laser.active) return;
-    const beamWidth = currentTier >= 5 ? 70 : 40;
-    const damage = LASER_DAMAGE * (currentTier >= 5 ? 2 : 1);
-    for (let i = enemies.length - 1; i >= 0; i -= 1) {
-      const enemy = enemies[i];
-      if (Math.abs(enemy.x - plane.x) <= beamWidth) {
-        enemy.health -= damage;
-        if (enemy.health <= 0) {
-          destroyEnemy(i, enemy);
-        }
-      }
-    }
-  }
+  // تم إزالة جميع القدرات (حزمة الحياة، الليزر، الدرع)
 
   function detectCollisions() {
     const now = performance.now();
@@ -1147,10 +990,6 @@
       const dy = Math.abs(enemy.y - plane.y);
       const collisionDistance = enemy.type === "boss" ? enemy.size / 1.8 : enemy.size;
       if (dx < collisionDistance && dy < collisionDistance) {
-        if (abilities.shield.active || (abilities.explosion && currentTier >= 5)) {
-          destroyEnemy(i, enemy, { viaExplosion: true });
-          continue;
-        }
         // نظام الحياة: خصم 10 نقاط عند الاصطدام
         if (now - lastCollisionTime > 500) {
           lastCollisionTime = now;
@@ -1213,25 +1052,6 @@
     });
     ctx.restore();
 
-    // Laser beam
-    if (abilities.laser.active) {
-      const gradientLaser = ctx.createLinearGradient(
-        plane.x - 5,
-        0,
-        plane.x + 5,
-        canvas.height
-      );
-      gradientLaser.addColorStop(0, "rgba(255, 255, 255, 0.9)");
-      gradientLaser.addColorStop(1, "rgba(255, 0, 128, 0.3)");
-      ctx.fillStyle = gradientLaser;
-      ctx.fillRect(
-        plane.x - (currentTier >= 5 ? 35 : 20),
-        0,
-        currentTier >= 5 ? 70 : 40,
-        plane.y - plane.height / 2
-      );
-    }
-
     // Bullets
     bullets.forEach((bullet) => {
       if (bullet.type === "rocket") {
@@ -1274,43 +1094,6 @@
       }
       ctx.restore();
     });
-
-    // Health Packs
-    healthPacks.forEach((pack) => {
-      ctx.save();
-      ctx.translate(pack.x, pack.y);
-      ctx.rotate(pack.rotation);
-      ctx.fillStyle = "#4de1c1";
-      ctx.beginPath();
-      ctx.moveTo(0, -pack.size / 2);
-      ctx.lineTo(-pack.size / 3, pack.size / 2);
-      ctx.lineTo(pack.size / 3, pack.size / 2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(-pack.size / 6, -pack.size / 4, pack.size / 3, pack.size / 2);
-      ctx.restore();
-    });
-
-    // Shield aura
-    if (abilities.shield.active) {
-      ctx.save();
-      const gradientShield = ctx.createRadialGradient(
-        plane.x,
-        plane.y,
-        plane.width / 2,
-        plane.x,
-        plane.y,
-        plane.width * 1.4
-      );
-      gradientShield.addColorStop(0, "rgba(100, 255, 209, 0.35)");
-      gradientShield.addColorStop(1, "rgba(100, 255, 209, 0)");
-      ctx.fillStyle = gradientShield;
-      ctx.beginPath();
-      ctx.arc(plane.x, plane.y, plane.width * 1.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
 
     // Plane (triangle + fin)
     ctx.fillStyle = plane.color;
@@ -1379,12 +1162,6 @@
     if (tierConfig.tier !== currentTier) {
       currentTier = tierConfig.tier;
       applyTierEffects(tierConfig);
-      updateUpgradeUI(tierConfig.name);
-      showFeedback(
-        dashboardFeedback,
-        `ترقية جديدة: ${tierConfig.name}`,
-        "success"
-      );
     }
   }
 
@@ -1401,82 +1178,7 @@
     hudLevelEl.textContent = currentLevel;
   }
 
-  function updateUpgradeUI(label) {
-    upgradeLabelEl.textContent = label;
-    hudUpgradeEl.textContent = label.split(" - ")[0] || label;
-  }
-
-  function updateAbilities(timestamp) {
-    const now = timestamp || performance.now();
-    activateAbilityIfReady(abilities.shield, shieldIndicator, "الدرع", now);
-    activateAbilityIfReady(abilities.laser, laserIndicator, "الليزر", now);
-    updateHealthPackAbility(now);
-  }
-
-  function updateHealthPackAbility(now) {
-    if (!healthPackIndicator) return;
-    if (!abilities.healthPack.available) {
-      healthPackIndicator.textContent = "حزمة الحياة: غير متاح";
-      healthPackIndicator.classList.remove("ready");
-      return;
-    }
-
-    if (!abilities.healthPack.active) {
-      const remaining = Math.max(
-        0,
-        Math.ceil((abilities.healthPack.interval - (now - abilities.healthPack.lastTrigger)) / 1000)
-      );
-      healthPackIndicator.textContent = remaining
-        ? `حزمة الحياة: ${remaining}s`
-        : "حزمة الحياة: جاهز";
-      healthPackIndicator.classList.toggle("ready", remaining === 0);
-      
-      if (remaining === 0) {
-        spawnHealthPack();
-      }
-    } else {
-      healthPackIndicator.textContent = "حزمة الحياة: نشطة";
-      healthPackIndicator.classList.add("ready");
-    }
-  }
-
-  function activateAbilityIfReady(ability, element, label, now) {
-    if (!element) return;
-    if (!ability.available) {
-      element.textContent = `${label}: غير متاح`;
-      element.classList.remove("ready");
-      return;
-    }
-
-    if (!ability.active && now - ability.lastTrigger >= ability.interval) {
-      ability.active = true;
-      ability.lastTrigger = now;
-    }
-
-    if (ability.active && now - ability.lastTrigger >= ability.duration) {
-      ability.active = false;
-    }
-
-    if (ability.active) {
-      element.textContent = `${label}: قيد التفعيل`;
-      element.classList.add("ready");
-    } else {
-      const remaining = Math.max(
-        0,
-        Math.ceil((ability.interval - (now - ability.lastTrigger)) / 1000)
-      );
-      element.textContent = remaining
-        ? `${label}: ${remaining}s`
-        : `${label}: جاهز`;
-      element.classList.toggle("ready", remaining === 0);
-    }
-  }
-
-  function updateAbilityIndicators() {
-    activateAbilityIfReady(abilities.shield, shieldIndicator, "الدرع");
-    activateAbilityIfReady(abilities.laser, laserIndicator, "الليزر");
-    updateHealthPackAbility();
-  }
+  // تم إزالة جميع الوظائف المرتبطة بالقدرات والترقية
 
   function setBossBanner(message) {
     if (!bossBanner) return;
